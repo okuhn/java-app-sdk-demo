@@ -3,6 +3,7 @@ package de.hackdarmstadt.demo.sdk;
 import org.thethingsnetwork.data.common.Connection;
 import org.thethingsnetwork.data.common.messages.ActivationMessage;
 import org.thethingsnetwork.data.common.messages.DataMessage;
+import org.thethingsnetwork.data.common.messages.DownlinkMessage;
 import org.thethingsnetwork.data.common.messages.RawMessage;
 import org.thethingsnetwork.data.common.messages.UplinkMessage;
 import org.thethingsnetwork.data.mqtt.Client;
@@ -12,9 +13,11 @@ import org.thethingsnetwork.data.mqtt.Client;
  */
 public class App {
 
-	public static final String APPLICATION_ID = "lopy-noise-app";
-	public static final String APPLICATION_KEY = "ttn-account-v2.dIwg3SFt_FLt78TGi-DrrlgNCxI8FjxUdpMm5BqaA0g";
+	public static final String APPLICATION_ID = "hackdarmstadt-ok";
+	public static final String APPLICATION_KEY = "ttn-account-v2.ms1Q1lm3EPgZYaejzx8Ug0X-pkWlW-g5cijVhRPNZ08";
 	public static final String REGION = "eu";
+	
+	private static int color = 0;
 
 	public static void main( String[] args ) {
 		Client client = createClient();
@@ -48,8 +51,23 @@ public class App {
 	/**
 	 * Callback handler for message events.
 	 */
-	private static void handleMessage(String deviceId, DataMessage data) {
-		System.out.println("Message: " + deviceId + " " + ((UplinkMessage) data).getCounter());		
+	private static void handleMessage(String deviceId, DataMessage data, Client client) {
+		System.out.println("Message: " + deviceId + " " + ((UplinkMessage) data).getCounter());
+		sendAnswer(deviceId, client);
+	}
+
+	private static void sendAnswer(String deviceId, Client client) {
+		color = (color+1) % 8;
+		byte r = (color & 0x1) == 0x1 ? (byte)255 : (byte)0;
+		byte g = (color & 0x2) == 0x2 ? (byte)255 : (byte)0;
+		byte b = (color & 0x4) == 0x4 ? (byte)255 : (byte)0;
+		DownlinkMessage _payload = new DownlinkMessage(1, new byte[] {r, g, b});
+		try {
+			System.out.println("Answering " + r + "/" + g + "/" + b);
+			client.send(deviceId, _payload);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 	
 	/**
@@ -83,6 +101,7 @@ public class App {
 	private static void registerCallbackHandlers(Client client) {
 		System.out.println("Register callback handlers");
 
+
 		client.onConnected((Connection cnx) 
 				-> handleConnect(cnx));
 
@@ -93,7 +112,7 @@ public class App {
 				-> handleDevice(devId, event, data));
 		
 		client.onMessage((String devId, DataMessage data) 
-				-> handleMessage(devId, data));
+				-> handleMessage(devId, data, client));
 		
 		client.onError((Throwable error) 
 				-> handleEror(error));
